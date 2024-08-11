@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Base64 Audio Playlist</title>
+    <style>
+        /* Basic styling */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f5f5f5;
+            overflow: hidden; /* Prevents scrollbars from appearing */
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        #fileInput {
+            margin-top: 20px;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #fff;
+            cursor: pointer;
+        }
+
+        #audioPlayer {
+            margin-top: 20px;
+            width: 100%;
+            max-width: 600px;
+            border-radius: 4px;
+        }
+
+        #playlist {
+            margin-top: 20px;
+            list-style-type: none;
+            padding: 0;
+            width: 100%;
+            max-width: 600px;
+            max-height: 300px; /* Set a maximum height */
+            overflow-y: auto; /* Enable vertical scrolling */
+            border: 1px solid #ccc; /* Optional: Add a border */
+            border-radius: 4px; /* Optional: Add rounded corners */
+        }
+
+        #playlist li {
+            padding: 10px;
+            cursor: pointer;
+            background-color: #eee;
+            border-bottom: 1px solid #ccc;
+        }
+
+        #playlist li:hover {
+            background-color: #ddd;
+        }
+
+        #playlist li.active {
+            background-color: #bada55; /* Highlight color */
+        }
+
+        #errorMessage {
+            margin-top: 20px;
+            font-size: 16px;
+            color: red;
+        }
+
+        /* Responsive styling */
+        @media (max-width: 600px) {
+            #fileInput {
+                width: 100%;
+                box-sizing: border-box;
+            }
+            
+            #audioPlayer {
+                width: 100%;
+            }
+
+            #playlist {
+                max-height: 200px; /* Reduce max-height for smaller screens */
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Base64 Audio Playlist</h1>
+    <input type="file" id="fileInput" multiple />
+    <audio id="audioPlayer" controls>
+        Your browser does not support the audio element.
+    </audio>
+    <ul id="playlist"></ul>
+    <div id="errorMessage"></div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const audioPlayer = document.getElementById('audioPlayer');
+        const playlist = document.getElementById('playlist');
+        const errorMessage = document.getElementById('errorMessage');
+
+        fileInput.addEventListener('change', handleFiles);
+
+        function handleFiles(event) {
+            const files = event.target.files;
+            playlist.innerHTML = ''; // Clear existing playlist
+            const fileList = [];
+
+            for (const file of files) {
+                if (file.type.startsWith('text/')) {
+                    const reader = new FileReader();
+                    
+                    reader.onload = function(e) {
+                        try {
+                            const content = e.target.result.trim();
+                            let base64String;
+                            
+                            if (content.startsWith('data:audio/mpeg;base64,')) {
+                                base64String = content.split(',')[1];
+                            } else {
+                                base64String = content;
+                            }
+
+                            if (base64String) {
+                                fileList.push({ fileName: file.name, base64String });
+                                
+                                // Add to playlist
+                                const listItem = document.createElement('li');
+                                listItem.textContent = file.name;
+                                listItem.addEventListener('click', () => playAudio(base64String, file.name));
+                                playlist.appendChild(listItem);
+                            } else {
+                                throw new Error('Base64 string not found or invalid.');
+                            }
+                        } catch (error) {
+                            errorMessage.textContent = `Error: ${error.message}`;
+                        }
+                    };
+
+                    reader.readAsText(file);
+                } else {
+                    errorMessage.textContent = 'Please upload only text files.';
+                }
+            }
+        }
+
+        function playAudio(base64String, trackName) {
+            const audioDataUrl = `data:audio/mpeg;base64,${base64String}`;
+            audioPlayer.src = audioDataUrl;
+            audioPlayer.play().catch(err => {
+                errorMessage.textContent = 'Error playing audio. The Base64 string might be invalid.';
+            });
+            errorMessage.textContent = '';
+
+            // Update playlist to highlight the currently playing track
+            const items = playlist.querySelectorAll('li');
+            items.forEach(item => {
+                item.classList.toggle('active', item.textContent === trackName);
+            });
+        }
+    </script>
+</body>
+</html>
